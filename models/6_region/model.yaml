@@ -5,7 +5,6 @@ import:
 model:
     name: 6-region model
     calliope_version: 0.6.6
-    timeseries_data_path: ''
 
 run:
     objective_options.cost_class.monetary: 1

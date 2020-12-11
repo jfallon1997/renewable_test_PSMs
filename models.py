@@ -30,10 +30,13 @@ def load_time_series_data(model_name):
 
     ts_data = pd.read_csv('data/demand_wind_solar.csv', index_col=0)
     ts_data.index = pd.to_datetime(ts_data.index)
-    
+    ts_data[ts_data < 0] = 0    # Fix tiny negative values
+
     # If 1_region model, take demand, wind and solar from region 5
     if model_name == '1_region':
-        ts_data = ts_data.loc[:, ['demand_region5', 'wind_region5', 'solar_region5']]
+        ts_data = ts_data.loc[:, ['demand_region5',
+                                  'wind_region5',
+                                  'solar_region5']]
         ts_data.columns = ['demand', 'wind', 'solar']
 
     return ts_data
@@ -209,8 +212,11 @@ class ModelBase(calliope.Model):
                              '(choose 1_region or 6_region)')
 
         self.model_name = model_name
-        self.base_dir = os.path.join('models', model_name)
         self.num_timesteps = ts_data.shape[0]
+
+        # Preprocess time series data
+        ts_data = self._create_init_time_series(ts_data)
+        timeseries_dataframes = {'ts_data': ts_data}
 
         # Create scenarios and overrides
         scenario = get_scenario(run_mode, baseload_integer,
@@ -220,21 +226,13 @@ class ModelBase(calliope.Model):
         override_dict = (get_cap_override_dict(model_name, fixed_caps)
                          if fixed_caps is not None else None)
 
-        # Calliope requires a CSV file of the time series data to be present
-        # at time of initialisation. This creates a new directory with the
-        # model files and data for the model, then deletes it once the model
-        # exists in Python
-        self._base_dir_iter = self.base_dir + '_' + str(run_id)
-        if os.path.exists(self._base_dir_iter):
-            shutil.rmtree(self._base_dir_iter)
-        shutil.copytree(self.base_dir, self._base_dir_iter)
-        ts_data = self._create_init_time_series(ts_data)
-        ts_data.to_csv(os.path.join(self._base_dir_iter, 'demand_wind_solar.csv'))
-        super(ModelBase, self).__init__(os.path.join(self._base_dir_iter,
-                                                     'model.yaml'),
-                                        scenario=scenario,
-                                        override_dict=override_dict)
-        shutil.rmtree(self._base_dir_iter)
+        # Initialize model from Calliope parent
+        super(ModelBase, self).__init__(
+            os.path.join('models', model_name, 'model.yaml'),
+            timeseries_dataframes=timeseries_dataframes,
+            scenario=scenario,
+            override_dict=override_dict,
+        )
 
         # Adjust weights if these are included in ts_data
         if 'weight' in ts_data.columns:
