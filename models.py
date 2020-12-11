@@ -212,6 +212,7 @@ class ModelBase(calliope.Model):
                              '(choose 1_region or 6_region)')
 
         self.model_name = model_name
+        self.run_mode = run_mode
         self.num_timesteps = ts_data.shape[0]
 
         # Preprocess time series data
