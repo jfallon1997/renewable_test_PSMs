@@ -5,10 +5,6 @@ import os
 import argparse
 import time
 import logging
-import calliope
-import numpy as np
-import pandas as pd
-import samplers
 import models
 import tests
 import pdb
@@ -34,9 +30,6 @@ def parse_args():
     parser.add_argument('--ts_data_subset_llim', required=True, type=str)
     parser.add_argument('--ts_data_subset_rlim', required=True, type=str)
     parser.add_argument('--run_mode', required=True, type=str)
-    parser.add_argument('--baseload_integer', required=True, type=bool)
-    parser.add_argument('--baseload_ramping', required=True, type=bool)
-    parser.add_argument('--allow_unmet', required=True, type=bool)
     parser.add_argument('--logging_level', required=False, type=str,
                         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR',
                                  'CRITICAL'], default='WARNING',
@@ -52,19 +45,31 @@ def get_output_directory(create_directory=False):
 
     base_directory = 'outputs_hpc'
     model_directory = args.model_name
+    ts_directory = args.ts_data_subset_llim + '_' + args.ts_data_subset_rlim
     output_directory = os.path.join(base_directory,
-                                    model_directory)
+                                    model_directory,
+                                    ts_directory)
 
     # Create the right output directory if it does not exist
     if create_directory:
         sub_directory_path = ''
-        for sub_directory in [base_directory, model_directory]:
+        for sub_directory in [base_directory, model_directory, ts_directory]:
             sub_directory_path = os.path.join(sub_directory_path,
                                               sub_directory)
             if not os.path.exists(sub_directory_path):
                 os.makedirs(sub_directory_path, exist_ok=True)
 
     return output_directory
+
+
+def get_runid_string(baseload_integer, baseload_ramping, allow_unmet):
+    """Get the string identifying a model run"""
+    args = parse_args()
+    runid_string = '_'.join((args.run_mode,
+                             'baseload-integer-' + str(baseload_integer),
+                             'baseload-ramping-' + str(baseload_ramping),
+                             'allow-unmet-' + str(allow_unmet)))
+    return runid_string
 
 
 def import_time_series_data(model_name, ts_subset_llim, ts_subset_rlim):
@@ -89,7 +94,8 @@ def run_simulation(model_name, ts_data, run_mode, baseload_integer,
     results: pandas DataFrame with model outputs
     """
 
-    extra_override = 'gurobi' if 'LAPTOP' in run_id else None
+    # extra_override = 'gurobi' if 'LAPTOP' in run_id else None
+    extra_override = None
 
     start = time.time()
     if model_name == '1_region':
@@ -126,7 +132,7 @@ def run_simulation(model_name, ts_data, run_mode, baseload_integer,
     return results
 
 
-def conduct_model_run(iteration):
+def conduct_model_run(baseload_integer, baseload_ramping, allow_unmet):
     """Conduct a single model run.
 
     Parameters:
@@ -144,16 +150,14 @@ def conduct_model_run(iteration):
                                       args.ts_data_subset_llim,
                                       args.ts_data_subset_rlim)
 
-    pdb.set_trace()
-
-    results = run_simulation(model_name=args.model_name,
-                             ts_data=
-
-
-
-    
-    # else:
-    #     raise NotImplementedError()
+    summary_outputs = run_simulation(model_name=args.model_name,
+                                     ts_data=ts_data,
+                                     run_mode=args.run_mode,
+                                     baseload_integer=baseload_integer,
+                                     baseload_ramping=baseload_ramping,
+                                     allow_unmet=allow_unmet,
+                                     run_id=RUN_ID,
+                                     save_csv=False)
 
     return summary_outputs
 
@@ -172,27 +176,23 @@ def conduct_model_runs():
     # Create output directory if it does not exist yet
     output_directory = get_output_directory(create_directory=True)
 
-    # Run the model and save results to CSV
-    iteration_index = np.arange(args.num_iterations)
-    for iteration in iteration_index:
-        if (PRN == 0) or (iteration == PRN - 1):
-
-            # Extra condition for yearly runs, only from 1980 to 2017
-            if args.subsampling == 'years':
-                iteration = iteration + 1980
-                if iteration > 2017:
-                    continue
-
-            output_path = os.path.join(output_directory,
-                                       'iter_{:04d}.csv'.format(iteration))
-            logging.info('Iteration: %s', iteration)
-            np.random.seed(iteration)
-            if not os.path.isfile(output_path):
-                summary_outputs = conduct_model_run(iteration)
-                summary_outputs.to_csv(output_path)
-            else:
-                logging.info('Output file already exists.')
-            logging.info('\n\n\n\n')
+    for baseload_integer in [False, True]:
+        for baseload_ramping in [False, True]:
+            for allow_unmet in [False, True]:
+                output_path = os.path.join(
+                    output_directory,
+                    get_runid_string(baseload_integer,
+                                     baseload_ramping,
+                                     allow_unmet) + '.csv'
+                    )
+                if not os.path.isfile(output_path):
+                    summary_outputs = conduct_model_run(baseload_integer,
+                                                        baseload_ramping,
+                                                        allow_unmet)
+                    summary_outputs.to_csv(output_path)
+                else:
+                    logging.info('Output file already exists.')
+                logging.info('\n\n\n\n')
 
 
 if __name__ == '__main__':

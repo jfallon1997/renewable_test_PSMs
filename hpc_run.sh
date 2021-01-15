@@ -1,64 +1,19 @@
-MODEL_NAME="6_region_operate"
-NUM_ITERATIONS=2
+MODEL_NAME="1_region"
+TS_DATA_SUBSET_LLIM="2017-01"
+TS_DATA_SUBSET_RLIM="2017-01"
+RUN_MODE="plan"
 
-# python3 model_runs.py \
-#         --model_name $MODEL_NAME \
-#         --subsampling multiyear \
-#         --num_iterations $NUM_ITERATIONS \
-#         --logging_level INFO
-
-# python3 model_runs.py \
-#         --model_name $MODEL_NAME \
-#         --subsampling years \
-#         --num_iterations $NUM_ITERATIONS \
-#         --logging_level INFO
 
 python3 model_runs.py \
         --model_name $MODEL_NAME \
-        --subsampling bootstrap_weeks_1 \
-        --num_iterations $NUM_ITERATIONS \
+        --ts_data_subset_llim $TS_DATA_SUBSET_LLIM \
+        --ts_data_subset_rlim $TS_DATA_SUBSET_RLIM \
+        --run_mode $RUN_MODE \
         --logging_level INFO
 
-# python3 model_runs.py \
-#         --model_name $MODEL_NAME \
-#         --subsampling bootstrap_weeks_3 \
-#         --num_iterations $NUM_ITERATIONS \
-#         --logging_level INFO
 
-# python3 model_runs.py \
-#         --model_name $MODEL_NAME \
-#         --subsampling bootstrap_weeks_6 \
-#         --num_iterations $NUM_ITERATIONS \
-#         --logging_level INFO
+# for MODEL_NAME in "1_region" "6_region"
+# do
+#     echo $MODEL_NAME
+# done
 
-# python3 model_runs.py \
-#         --model_name $MODEL_NAME \
-#         --subsampling bootstrap_weeks_9 \
-#         --num_iterations $NUM_ITERATIONS \
-#         --logging_level INFO
-
-# python3 model_runs.py \
-#         --model_name $MODEL_NAME \
-#         --subsampling bootstrap_weeks_12 \
-#         --num_iterations $NUM_ITERATIONS \
-#         --logging_level INFO
-
-# python3 model_runs.py \
-#         --model_name $MODEL_NAME \
-#         --subsampling bootstrap_months_1 \
-#         --num_iterations $NUM_ITERATIONS \
-#         --logging_level INFO
-
-# python3 model_runs.py \
-#         --model_name $MODEL_NAME \
-#         --subsampling bootstrap_months_2 \
-#         --num_iterations $NUM_ITERATIONS \
-#         --logging_level INFO
-
-# python3 model_runs.py \
-#         --model_name $MODEL_NAME \
-#         --subsampling bootstrap_months_3 \
-#         --num_iterations $NUM_ITERATIONS \
-#         --logging_level INFO
-
-# python3 postprocessing.py organise
