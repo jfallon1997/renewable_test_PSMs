@@ -177,7 +177,14 @@ def calculate_carbon_emissions(generation_levels):
 def save_html(plot_html: str, fname='output.html', title=''):
     """Save calliope plot to html, including missing javascript fix
     (relevant for Calliope versions such as 0.6.6 where plotting may not
-    function properly without this workaround)"""
+    function properly without this workaround)
+
+    Parameters:
+    -----------
+    plot_html : calliope html output
+    fname : path to output file
+    title : (optional) insert html head title
+    """
     with open(fname, 'w') as fout:
         fout.write(
             f'<html><head><title>{title}</title>'
@@ -188,10 +195,15 @@ def save_html(plot_html: str, fname='output.html', title=''):
         )
 
 
-def rm_folder(output_folder):
-    """Remove a folder, except if folder not found"""
+def rm_folder(fname: str):
+    """Remove a folder, except if folder not found
+
+    Parameters:
+    -----------
+    fname: path to folder for deletion
+    """
     try:
-        shutil.rmtree(output_folder)
+        shutil.rmtree(fname)
     except FileNotFoundError:
         pass
 
@@ -300,7 +312,20 @@ class ModelBase(calliope.Model):
         return ts_data_used
 
     def preview(self, array_str, head=10, time_idx=True, loc=None, **kwargs):
-        """Generate a preview of a Model attribute (eg. inputs.resource)"""
+        """Generate a preview of a Model attribute (eg. inputs.resource)
+
+        Parameters:
+        -----------
+        array_str (str) : attribute path to array
+        head (int) : if non-zero, return head instead of full resource array
+        time_idx (bool) : set resource index to timesteps if True
+        loc (str) : override loc autosearch if set
+        kwargs (dict) : pass arguments to pandas DataFrame
+
+        Returns:
+        --------
+        resource (pandas DataFrame) : processed collection of input array
+        """
         # Access array (split at '.' into nested getattr)
         array = self
         for attrib in array_str.split('.'):
