@@ -13,6 +13,7 @@ EMISSION_INTENSITIES = {'baseload': 200,
                         'peaking': 400,
                         'wind': 0,
                         'solar': 0,
+                        'generators': 800,
                         'unmet': 0}
 
 
@@ -21,7 +22,7 @@ def load_time_series_data(model_name):
 
     Parameters:
     -----------
-    model_name (str) : '1_region' or '6_region'
+    model_name (str) : 'N_region'
 
     Returns:
     --------
@@ -409,6 +410,112 @@ class OneRegionModel(ModelBase):
         outputs.loc['emissions_total'] = calculate_carbon_emissions(
             {tech: outputs.loc[f'gen_{tech}_total'] for tech in
              ['baseload', 'peaking', 'wind', 'solar', 'unmet']}
+        )
+
+        return outputs
+
+
+class TwoRegionModel(ModelBase):
+    """Instance of 2-region power system model."""
+
+    def __init__(self, ts_data, run_mode, **arg_parameters):
+        # Initialize model from ModelBase parent.
+        super().__init__('2_region', ts_data, run_mode, **arg_parameters)
+
+    def get_summary_outputs(self):
+        """Create pandas DataFrame of subset of relevant model outputs."""
+
+        assert hasattr(self, 'results'), \
+            'Model outputs have not been calculated: call self.run() first.'
+
+        outputs = pd.DataFrame(columns=['output'])    # Output DataFrame
+        corrfac = (8760/self.num_timesteps)    # For annualisation
+
+        # Baseload and peaking capacity
+        for tech in ['baseload', 'peaking']:
+            outputs.loc[f'cap_{tech}_region1'] = (
+                float(self.results.energy_cap.loc[f'region1::{tech}_region1'])
+            )
+
+        # Wind and solar capacity
+        for tech in ['wind', 'solar']:
+            outputs.loc[f'cap_{tech}_region1'] = (
+                float(self.results.resource_area.loc[
+                    f'region1::{tech}_region1'])
+            )
+
+        # Peak unmet demand
+        for region in ['region1', 'region2']:
+            outputs.loc[f'peak_unmet_{region}'] = (
+                float(self.results.carrier_prod.loc[
+                    f'{region}::unmet_{region}::power'].max())
+            )
+
+        # Transmission capacity
+        outputs.loc['cap_transmission_region1_region2'] = (
+            float(self.results.energy_cap.loc[
+                'region1::transmission_region1_region2:region2'])
+            )
+
+        # region1
+        # Baseload, peaking, wind, solar and unmet generation levels
+        for tech in ['baseload', 'peaking', 'wind', 'solar', 'unmet']:
+            outputs.loc[f'gen_{tech}_region1'] = corrfac * float(
+                (self.results.carrier_prod.loc[
+                    f'region1::{tech}_region1::power']
+                    * self.inputs.timestep_weights).sum()
+            )
+        # region2
+        # Generators and unmet generation levels
+        for tech in ['generators', 'unmet']:
+            outputs.loc[f'gen_{tech}_region2'] = corrfac * float(
+                (self.results.carrier_prod.loc[
+                    f'region2::{tech}_region2::power']
+                    * self.inputs.timestep_weights).sum()
+            )
+
+        # Demand levels
+        for region in ['region1', 'region2']:
+            outputs.loc['demand_{}'.format(region)] = -corrfac * float(
+                (self.results.carrier_con.loc[f'{region}::demand_power::power']
+                 * self.inputs.timestep_weights).sum()
+            )
+
+        # Insert total capacities
+        for tech in ['baseload', 'peaking', 'wind', 'solar', 'generators',
+                     'transmission']:
+            outputs.loc[f'cap_{tech}_total'] = outputs.loc[
+                outputs.index.str.contains(f'cap_{tech}')].sum()
+
+        outputs.loc['peak_unmet_total'] = outputs.loc[
+            outputs.index.str.contains('peak_unmet')].sum()
+
+        # Insert total peak unmet demand -- not necessarily equal to
+        # peak_unmet_total. Total unmet capacity sums peak unmet demand
+        # across regions, whereas this is the systemwide peak unmet demand
+        outputs.loc['peak_unmet_systemwide'] = float(
+            self.results.carrier_prod.loc[
+                self.results.carrier_prod.loc_tech_carriers_prod.str.contains(
+                    'unmet')].sum(axis=0).max())
+
+        # Insert total annualised generation and unmet demand levels
+        for tech in ['baseload', 'peaking', 'wind', 'solar', 'generators',
+                     'unmet']:
+            outputs.loc[f'gen_{tech}_total'] = outputs.loc[
+                outputs.index.str.contains(f'gen_{tech}')].sum()
+
+        # Insert total annualised demand levels
+        outputs.loc['demand_total'] = (
+            outputs.loc[outputs.index.str.contains('demand')].sum()
+        )
+
+        # Insert annualised total system cost
+        outputs.loc['cost_total'] = corrfac * float(self.results.cost.sum())
+
+        # Insert annualised carbon emissions
+        outputs.loc['emissions_total'] = calculate_carbon_emissions(
+            {tech: outputs.loc[f'gen_{tech}_total'] for tech in
+             ['baseload', 'peaking', 'wind', 'solar', 'generators', 'unmet']}
         )
 
         return outputs

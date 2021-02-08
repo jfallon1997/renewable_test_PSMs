@@ -1,0 +1,53 @@
+import:
+    - 'techs.yaml' 
+    - 'locations.yaml'
+
+model:
+    name: 2-region model
+    calliope_version: 0.6.6
+    timeseries_data_path: ''
+
+run:
+    objective_options.cost_class.monetary: 1
+    solver: cbc
+    zero_threshold: 1e-10  # Round any value smaller to 0
+
+overrides:
+    plan:
+    # planning mode -- determine capacities
+        run.mode: plan
+    continuous:
+    # continuous baseload capacity
+        techs.baseload_region1.constraints.energy_cap_max: inf
+    integer:
+    # baseload capacity in units of 3GW
+        techs.baseload_region1.constraints.units_max: inf
+        techs.baseload_region1.constraints.energy_cap_per_unit: 3
+    allow_unmet:
+    # plan mode only, unmet demand always allowed in operate mode
+        techs.unmet_region1.costs.monetary.energy_cap: 0
+        techs.unmet_region2.costs.monetary.energy_cap: 0
+    operate:
+    # operate mode -- fixed capacities
+        run:
+            mode: operate
+            cyclic_storage: False
+            operation:
+                # maximise scheduling horizon
+                horizon: 332880  # hours
+                window: 332880  # hours
+        locations:
+            region1:
+                techs.baseload_region1.constraints.energy_cap_equals: 50
+                techs.peaking_region1.constraints.energy_cap_equals: 20
+                techs.wind_region1.constraints.resource_area_equals: 35
+                techs.solar_region1.constraints.resource_area_equals: 35
+                techs.unmet_region1.constraints.energy_cap_equals: 1e10
+            region2:
+                techs.generators_region2.constraints.energy_cap_equals: 0
+                techs.unmet_region2.constraints.energy_cap_equals: 1e10
+        links:
+            region1,region2:
+                techs.transmission_region1_region2.constraints.energy_cap_equals: 0
+    ramping:
+        techs.baseload_region1.constraints.energy_ramping: 0.2  # frac/hr

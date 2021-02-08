@@ -1,9 +1,14 @@
-techs:
 # plant lifetimes used only calculating cost - plants do not close after 1 yr
-    baseload:
+techs:
+    demand_power:
+        essentials:
+            carrier: power
+            name: demand
+            parent: demand
+    baseload_region1:
         essentials:
             carrier_out: power
-            name: baseload
+            name: baseload_region1
             parent: supply
         constraints:
             lifetime: 1  # yr
@@ -12,10 +17,10 @@ techs:
                 energy_cap: 300  # GBP per KW
                 om_con: 0.005  # GBP per KWh
                 interest_rate: 0               
-    peaking:
+    peaking_region1:
         essentials:
             carrier_out: power
-            name: peaking
+            name: peaking_region1
             parent: supply
         constraints:
             lifetime: 1  # yr
@@ -24,10 +29,10 @@ techs:
                 energy_cap: 100  # GBP per KW
                 om_con: 0.035  # GBP per KWh
                 interest_rate: 0
-    wind:
+    wind_region1:
         essentials:
             carrier_out: power
-            name: wind
+            name: wind_region1
             parent: supply
         constraints:
             lifetime: 1  # yr
@@ -37,10 +42,10 @@ techs:
                 resource_area: 100  # GBP per KW
                 om_con: 0  # GBP per KWh
                 interest_rate: 0
-    solar:
+    solar_region1:
         essentials:
             carrier_out: power
-            name: solar
+            name: solar_region1
             parent: supply
         constraints:
             lifetime: 1  # yr
@@ -50,10 +55,22 @@ techs:
                 resource_area: 1e10  # disabled 30  # GBP per KW
                 om_con: 0  # GBP per KWh
                 interest_rate: 0
-    unmet:
+    generators_region2:
         essentials:
             carrier_out: power
-            name: unmet
+            name: generators_region2
+            parent: supply
+        constraints:
+            lifetime: 1  # yr
+        costs:
+            monetary:
+                energy_cap: 0  # GBP per KW
+                om_con: 0.01  # GBP per KWh
+                interest_rate: 0
+    unmet_region1:
+        essentials:
+            carrier_out: power
+            name: unmet_region1
             parent: supply
         constraints:
             lifetime: 1  # yr
@@ -62,8 +79,30 @@ techs:
                 energy_cap: 1e10  # GBP per KW
                 om_con: 6  # GBP per KWh
                 interest_rate: 0
-    demand_power:
+    unmet_region2:
+        essentials:
+            carrier_out: power
+            name: unmet_region2
+            parent: supply
+        constraints:
+            lifetime: 1  # yr
+        costs:
+            monetary:
+                energy_cap: 1e10  # GBP per KW
+                om_con: 6  # GBP per KWh
+                interest_rate: 0
+
+    # Transmission
+    transmission_region1_region2:
         essentials:
             carrier: power
-            name: demand
-            parent: demand
+            name: transmission_region1_region2
+            parent: transmission
+        constraints:
+            lifetime: 1  # yr
+            energy_eff: 1.0
+        costs:
+            monetary:
+                interest_rate: 0
+                energy_cap: 0 # GBP per KW
+

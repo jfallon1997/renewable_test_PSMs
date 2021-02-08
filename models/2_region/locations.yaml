@@ -1,0 +1,32 @@
+locations:
+    region1:
+        coordinates: {lat: 0, lon: 0}
+        techs:
+            baseload_region1:
+            peaking_region1:
+            wind_region1:
+                constraints:
+                    resource: file=demand_wind_solar.csv:wind_region1
+            solar_region1:
+                constraints:
+                    resource: file=demand_wind_solar.csv:solar_region1
+            demand_power:
+               constraints:
+                    resource: file=demand_wind_solar.csv:demand_region1
+            unmet_region1:
+
+    region2:
+        coordinates: {lat: 0, lon: 1}
+        techs:
+            generators_region2:
+            demand_power:
+               constraints:
+                    resource: file=demand_wind_solar.csv:demand_region2
+            unmet_region2:
+
+
+links:
+    region1,region2:
+        techs:
+            transmission_region1_region2:
+
