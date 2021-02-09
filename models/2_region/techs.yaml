@@ -65,7 +65,7 @@ techs:
         costs:
             monetary:
                 energy_cap: 0  # GBP per KW
-                om_con: 0.01  # GBP per KWh
+                om_con: 0.35 # GBP per KWh
                 interest_rate: 0
     unmet_region1:
         essentials:

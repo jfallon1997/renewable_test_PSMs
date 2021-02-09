@@ -29,4 +29,5 @@ links:
     region1,region2:
         techs:
             transmission_region1_region2:
-
+                constraints:
+                    one_way: true

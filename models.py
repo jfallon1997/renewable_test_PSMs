@@ -17,7 +17,7 @@ EMISSION_INTENSITIES = {'baseload': 200,
                         'unmet': 0}
 
 
-def load_time_series_data(model_name):
+def load_time_series_data(model_name, additional_data=None):
     """Load demand, wind and solar time series data for model.
 
     Parameters:
@@ -32,11 +32,20 @@ def load_time_series_data(model_name):
     ts_data = pd.read_csv('data/demand_wind_solar.csv', index_col=0)
     ts_data.index = pd.to_datetime(ts_data.index)
 
-    # If 1_region model, take demand, wind and solar from region 5
-    if model_name == '1_region':
+    # If region 1 or 2 model, take demand, wind and solar from region 5
+    if model_name in ['1_region', '2_region']:
         ts_data = ts_data.loc[:, ['demand_region5', 'wind_region5',
                                   'solar_region5']]
+
+    # Simplifiy column names as appropriate
+    if model_name == '1_region':
         ts_data.columns = ['demand', 'wind', 'solar']
+    if model_name == '2_region':
+        ts_data.columns = ['demand_region1', 'wind_region1', 'solar_region1']
+
+    # If 2 region model, include additional reigon2 data
+    if model_name == '2_region':
+        ts_data['demand_region2'] = additional_data['demand_region2'].values
 
     return ts_data
 
@@ -101,7 +110,7 @@ def get_cap_override_dict(model_name, fixed_caps):
 
     Parameters:
     -----------
-    model_name (str) : '1_region' or '6_region'
+    model_name (str) : '1_region', '2_region', or '6_region'
     fixed_caps (pandas Series/DataFrame or dict) : the fixed capacities.
         A DataFrame created via model.get_summary_outputs will work.
 
@@ -124,6 +133,27 @@ def get_cap_override_dict(model_name, fixed_caps):
                                 ('solar', 'resource_area_equals')]:
             idx = f'locations.region1.techs.{tech}.constraints.{attribute}'
             o_dict[idx] = fixed_caps[f'cap_{tech}_total']
+
+    # Add baseload, peaking, wind, solar, generator and transmission capacities
+    if model_name == '2_region':
+        # region1 techs
+        for tech, attribute in [('baseload', 'energy_cap_equals'),
+                                ('peaking', 'energy_cap_equals'),
+                                ('wind', 'resource_area_equals'),
+                                ('solar', 'resource_area_equals')]:
+            idx = f'locations.region1.techs.{tech}_region1' +\
+                  f'.constraints.{attribute}'
+            o_dict[idx] = fixed_caps[f'cap_{tech}_region1']
+
+        # region2 techs
+        idx = 'locations.region2.techs.generators_region2.constraints' +\
+              '.energy_cap_equals'
+        o_dict[idx] = fixed_caps['cap_generators_region2']
+
+        # transmission region1 to region2
+        idx = 'links.region1,region2.techs.transmission_region1_region2' +\
+              '.constraints.energy_cap_equals'
+        o_dict[idx] = fixed_caps['cap_transmission_region1_region2']
 
     # Add baseload, peaking, wind, solar and transmission capacities
     if model_name == '6_region':
@@ -221,7 +251,7 @@ class ModelBase(calliope.Model):
 
         Parameters:
         -----------
-        model_name (str) : either '1_region' or '6_region'
+        model_name (str) : either '1_region', '2_region' or '6_region'
         ts_data (pandas DataFrame) : time series with time series data.
             It may also contain custom time step weights
         run_mode (str) : 'plan' or 'operate': whether to let the model
@@ -237,9 +267,9 @@ class ModelBase(calliope.Model):
         run_id (int) : can be changed if multiple models are run in parallel
         """
 
-        if model_name not in ['1_region', '6_region']:
+        if model_name not in ['1_region', '2_region', '6_region']:
             raise ValueError('Invalid model name '
-                             '(choose 1_region or 6_region)')
+                             '(choose 1_region, 2_region or 6_region)')
 
         self.model_name = model_name
         self.base_dir = os.path.join('models', model_name)
@@ -288,7 +318,10 @@ class ModelBase(calliope.Model):
 
         if self.model_name == '1_region':
             expected_columns = {'demand', 'wind', 'solar'}
-        elif self.model_name == '6_region':
+        if self.model_name == '2_region':
+            expected_columns = {'demand_region1', 'wind_region1',
+                                'solar_region1', 'demand_region2'}
+        if self.model_name == '6_region':
             expected_columns = {'demand_region2', 'demand_region4',
                                 'demand_region5', 'wind_region2',
                                 'wind_region5', 'wind_region6',
