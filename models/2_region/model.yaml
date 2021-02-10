@@ -51,3 +51,14 @@ overrides:
                 techs.transmission_region1_region2.constraints.energy_cap_equals: 0
     ramping:
         techs.baseload_region1.constraints.energy_ramping: 0.2  # frac/hr
+
+    # specify a range of region2 generator operational cost modifications
+    generator_cost_sb:
+    # sub baseload
+        techs.generators_region2.costs.monetary.om_con: 0.001
+    generator_cost_sp:
+    # sub peaking
+        techs.generators_region2.costs.monetary.om_con: 0.010
+    generator_cost_su:
+    # sub unmet
+        techs.generators_region2.costs.monetary.om_con: 0.100
